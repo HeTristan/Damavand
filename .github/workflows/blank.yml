@@ -1,0 +1,40 @@
+name: Build Debian Repo
+on:  
+ push:    
+  branches:      main
+  jobs:  
+   build-repo:    
+    runs-on: debian-stable    
+     steps:      
+      - name: Checkout Repo        
+      uses: actions/checkout@v3      
+      
+      - name: Install Reprepro        
+       run: sudo apt update && sudo apt install -y reprepro dpkg-dev gnupg      
+      
+      - name: Prepare Repo Structure        
+       run: |
+       mkdir -p repo/conf          
+       cat <<EOF > repo/conf/distributions          
+       Codename: damavand          
+       Components: main          
+       Architectures: amd64           
+       SignWith: NO          
+       EOF      
+       
+       - name: Add Packages to Repo        
+       run: |          
+       mkdir -p repo/pool/main          
+       cp path/to/*.deb repo/pool/main/          
+       cd repo          
+       for pkg in pool/main/*.deb; do            
+       reprepro -b . includedeb mydistro "$pkg"          
+       done      
+       
+       - name: Commit and Push Repo       
+       run: |          
+       git config user.name "github-actions"          
+       git config user.email "actions@github.com"          
+       git add repo          
+       git commit -m "Update APT repo" || echo "No changes"          
+       git push
